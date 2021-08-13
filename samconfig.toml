@@ -1,0 +1,10 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "mng-mobile-notificaiton-system-stack-002"
+s3_bucket = "mng-mobile-notificaiton-system-bucket-002"
+s3_perfix = "mng-mobile-notificaiton-system-bucket-002"
+region = "ap-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"

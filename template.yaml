@@ -1,0 +1,414 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  whk1-bea-mng-opr-dev-codecommit-repo02
+  SAM Template for mng-mobile-notification-project
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Runtime: java11
+    Timeout: 180
+    MemorySize: 512
+    Environment:
+      Variables:
+        SnsTopicDomain: !Sub "arn:aws:sns:ap-southeast-1:${AWS::AccountId}:"
+        SnsPlatformDomain: !Sub "arn:aws:sns:ap-southeast-1:${AWS::AccountId}:app/"
+
+Parameters:
+  Stage:
+    Type: String
+    Description: Development Stage
+    Default: DEV
+
+Resources:
+  ExternalApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref "Stage"
+
+  InternalApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref "Stage"
+
+  LambdaExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+
+  LambdaGroupPolicies_:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: "MNGMobileNotificationSystemPolicies:"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: Ec2Policy
+            Effect: Allow
+            Action:
+              - ec2:CreateVpcEndpoint
+              - ec2:DescribeNetworkInterfaces
+              - ec2:CreateNetworkInterface
+              - ec2:DeleteNetworkInterface
+              - ec2:DescribeInstances
+              - ec2:AttachNetworkInterface
+            Resource: "*"
+          - Sid: SNSLogPolicy
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              Fn::Join:
+                - ""
+                - - "arn:aws:logs:"
+                  - !Ref "AWS::Region"
+                  - ":"
+                  - !Ref "AWS::AccountId"
+                  - ":*"
+          - Sid: APIAccessForDynamoDB
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:CreateTable
+              - dynamodb:PutItem
+              - dynamodb:GetItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:BatchGetItem
+              - dynamodb:BatchWriteItem
+              - dynamodb:ConditionCheckItem
+            Resource:
+              - !GetAtt InboxRecord.Arn
+              - !GetAtt AckRecord.Arn
+              - !GetAtt SnsAccount.Arn
+              - !GetAtt ApplicationChannel.Arn
+              - Fn::Join:
+                  - "/"
+                  - - { "Fn::GetAtt": [ "InboxRecord", "Arn" ] }
+                    - "index/*"
+              - Fn::Join:
+                  - "/"
+                  - - { "Fn::GetAtt": [ "AckRecord", "Arn" ] }
+                    - "index/*"
+              - Fn::Join:
+                  - "/"
+                  - - { "Fn::GetAtt": [ "SnsAccount", "Arn" ] }
+                    - "index/*"
+              - Fn::Join:
+                  - "/"
+                  - - { "Fn::GetAtt": [ "ApplicationChannel", "Arn" ] }
+                    - "index/*"
+          - Sid: SNSPulishPolicy
+            Effect: Allow
+            Action:
+              - sns:ListTopics
+              - sns:Publish
+              - sns:ListSubscriptionsByTopic
+              - sns:Subscribe
+              - sns:Unsubscribe
+              - sns:CreatePlatformEndpoint
+              - sns:DeleteEndpoint
+            Resource:
+              Fn::Join:
+                - ""
+                - - "arn:aws:sns:"
+                  - "ap-southeast-1"
+                  - ":"
+                  - !Ref "AWS::AccountId"
+                  - ":*"
+      Roles:
+        - Ref: "LambdaExecutionRole"
+
+  RegisterDeviceTokenFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: mng-mobile-notificaiton-system/
+      Handler: RegisterSnsService::handleRequest
+      Role: !GetAtt LambdaExecutionRole-.Arn
+      Events:
+        RegisterDeviceTokenAPI:
+          Type: Api
+          Properties:
+            Path: /registerDeviceToken
+            Method: POST
+            RestApiId:
+              Ref: ExternalApiGateway
+
+  SendNotificationFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: mng-mobile-notificaiton-system/
+      Handler: SendNotification::handleRequest
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        SendNotificationAPI:
+          Type: Api
+          Properties:
+            Path: /sendNotification
+            Method: POST
+            RestApiId:
+              Ref: InternalApiGateway
+
+  StoreAckRecordFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: mng-mobile-notificaiton-system/
+      Handler: StoreAckRecord::handleRequest
+      Role: !GetAtt LambdaExecutionRole.Arn
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-02e3e831a553bb665
+        SubnetIds:
+          - subnet-09ccfd909f401f632
+          - subnet-056f0d777bab1c58e
+          - subnet-079cbb4e748d98f7e
+      Events:
+        StoreAckRecordAPI:
+          Type: Api
+          Properties:
+            Path: /storeAckRecord
+            Method: POST
+            RestApiId:
+              Ref: ExternalApiGateway
+
+  RetrieveInboxRecordFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: mng-mobile-notificaiton-system/
+      Handler: RetrieveInboxRecord::handleRequest
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        RetrieveInboxRecordAPI:
+          Type: Api
+          Properties:
+            Path: /retrieveInboxRecord
+            Method: POST
+            RestApiId:
+              Ref: ExternalApiGateway
+
+  SubscribeTopicFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: mng-mobile-notificaiton-system/
+      Handler: SubscribeTopic::handleRequest
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        SubscribeTopicAPI:
+          Type: Api
+          Properties:
+            Path: /subscribeTopic
+            Method: POST
+            RestApiId:
+              Ref: ExternalApiGateway
+
+  UnsubscribeTopicFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: mng-mobile-notificaiton-system/
+      Handler: UnsubscribeTopic::handleRequest
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        SubscribeTopicAPI:
+          Type: Api
+          Properties:
+            Path: /unsubscribeTopic
+            Method: POST
+            RestApiId:
+              Ref: ExternalApiGateway
+
+  InboxRecord:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "msg_id"
+          AttributeType: "S"
+        - AttributeName: "msg_timestamp"
+          AttributeType: "S"
+        - AttributeName: "target"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "msg_id"
+          KeyType: "HASH"
+      TableName: "InboxRecord"
+      GlobalSecondaryIndexes:
+        - IndexName: "Target-MsgTimestamp-GSI"
+          KeySchema:
+            - AttributeName: "target"
+              KeyType: "HASH"
+            - AttributeName: "msg_timestamp"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      BillingMode: PAY_PER_REQUEST
+
+  AckRecord:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "msg_id"
+          AttributeType: "S"
+        - AttributeName: "app_reg_id"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "msg_id"
+          KeyType: "HASH"
+        - AttributeName: "app_reg_id"
+          KeyType: "RANGE"
+      TableName: "AckRecord"
+      LocalSecondaryIndexes:
+        - IndexName: "MsgId-AppRegId-LSI"
+          KeySchema:
+            - AttributeName: "msg_id"
+              KeyType: "HASH"
+            - AttributeName: "app_reg_id"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      BillingMode: PAY_PER_REQUEST
+
+  SnsAccount:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "app_reg_id"
+          AttributeType: "S"
+        - AttributeName: "device_token"
+          AttributeType: "S"
+        - AttributeName: "active_status"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "app_reg_id"
+          KeyType: "HASH"
+      TableName: "SnsAccount"
+      GlobalSecondaryIndexes:
+        - IndexName: "AppRegId-ActiveStatus-GSI"
+          KeySchema:
+            - AttributeName: "app_reg_id"
+              KeyType: "HASH"
+            - AttributeName: "active_status"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+        - IndexName: "DeviceToken-ActiveStatus-GSI"
+          KeySchema:
+            - AttributeName: "device_token"
+              KeyType: "HASH"
+            - AttributeName: "active_status"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      BillingMode: PAY_PER_REQUEST
+
+  ApplicationChannel:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "channel_name"
+          AttributeType: "S"
+        - AttributeName: "app_name"
+          AttributeType: "S"
+        - AttributeName: "mobile_type"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "channel_name"
+          KeyType: "HASH"
+        - AttributeName: "app_name"
+          KeyType: "RANGE"
+      TableName: "ApplicationChannel"
+      LocalSecondaryIndexes:
+        - IndexName: "ChannelName-AppName-LSI"
+          KeySchema:
+            - AttributeName: "channel_name"
+              KeyType: "HASH"
+            - AttributeName: "app_name"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+      GlobalSecondaryIndexes:
+        - IndexName: "AppName-MobileType-GSI"
+          KeySchema:
+            - AttributeName: "app_name"
+              KeyType: "HASH"
+            - AttributeName: "mobile_type"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      BillingMode: PAY_PER_REQUEST
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  RegisterDeviceTokenAPI:
+    Description: "API Gateway endpoint URL for Prod stage for Send Notification Function"
+    Value: !Sub "https://${ExternalApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/registerDeviceToken/"
+  RegisterDeviceTokenFunction:
+    Description: "Register Device Token Lambda Function ARN"
+    Value: !GetAtt RegisterDeviceTokenFunction.Arn
+
+  SendNotificationAPI:
+    Description: "API Gateway endpoint URL for Prod stage for Send Notification Function"
+    Value: !Sub "https://${InternalApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/sendNotification/"
+  SendNotificationFunction:
+    Description: "Send Notification Lambda Function ARN"
+    Value: !GetAtt SendNotificationFunction.Arn
+
+  StoreAckRecordAPI:
+    Description: "API Gateway endpoint URL for Prod stage for Store Ack Record Function"
+    Value: !Sub "https://${ExternalApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/storeAckRecord/"
+  StoreAckRecordFunction:
+    Description: "Store Ack Record Lambda Function ARN"
+    Value: !GetAtt StoreAckRecordFunction.Arn
+
+  RetrieveInboxRecordAPI:
+    Description: "API Gateway endpoint URL for Prod stage for Store Ack Record Function"
+    Value: !Sub "https://${ExternalApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/retrieveInboxRecord/"
+  RetrieveInboxRecordFunction:
+    Description: "Store Ack Record Lambda Function ARN"
+    Value: !GetAtt RetrieveInboxRecordFunction.Arn
+
+  SubscribeTopicAPI:
+    Description: "API Gateway endpoint URL for Prod stage for Subscribe Topic Function"
+    Value: !Sub "https://${ExternalApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/subscribeTopic/"
+  SubscribeTopicFunction:
+    Description: "Subscribe Topic Lambda Function ARN"
+    Value: !GetAtt SubscribeTopicFunction.Arn
+
+  UnsubscribeTopicAPI:
+    Description: "API Gateway endpoint URL for Prod stage for Subscribe Topic Function"
+    Value: !Sub "https://${ExternalApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/unsubscribeTopic/"
+  UnsubscribeTopicFunction:
+    Description: "Unsubscribe Topic Lambda Function ARN"
+    Value: !GetAtt UnsubscribeTopicFunction.Arn
+
+  InboxRecord:
+    Description: "InboxRecord's ARN"
+    Value: !GetAtt InboxRecord.Arn
+  AckRecord:
+    Description: "AckRecord's ARN"
+    Value: !GetAtt AckRecord.Arn
+  SnsAccount:
+    Description: "SnsAccount's ARN"
+    Value: !GetAtt SnsAccount.Arn
+  ApplicationChannel:
+    Description: "ApplicationChannel's ARN"
+    Value: !GetAtt ApplicationChannel.Arn
