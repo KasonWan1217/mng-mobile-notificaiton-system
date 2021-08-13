@@ -3,8 +3,8 @@ env:
   variables:
 #    TEMPLATE_FILE: "template.yaml"
     OUTPUT_TEMPLATE_FILE: "packaged.yml"
-    S3_BUCKET: "mng-mobile-notificaiton-system-bucket-001"
-    STACK : "mng-mobile-notificaiton-system-stack-001"
+    S3_BUCKET: "mng-mobile-notification-system-bucket-002"
+    STACK : "mng-mobile-notification-system-stack-002"
 phases:
   install:
     runtime-versions:
