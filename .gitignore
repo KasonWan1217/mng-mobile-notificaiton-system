@@ -1,0 +1,5 @@
+.aws-sam/*
+.idea/*
+events/*
+target/*
+event.json
