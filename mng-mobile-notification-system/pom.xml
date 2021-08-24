@@ -1,11 +1,11 @@
 ﻿<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>mng-mobile-notificaiton-system</groupId>
-    <artifactId>mng-mobile-notificaiton-system</artifactId>
+    <groupId>mng-mobile-notification-system</groupId>
+    <artifactId>mng-mobile-notification-system</artifactId>
     <version>1.0</version>
     <packaging>jar</packaging>
-    <name>Push Notification Project created for SAM CLI.</name>
+    <name>MNG Mobile Notification System created for SAM CLI.</name>
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
