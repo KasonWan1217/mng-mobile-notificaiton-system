@@ -12,6 +12,7 @@ import object.ResponseMessage;
 import org.apache.log4j.BasicConfigurator;
 import service.DynamoDBService;
 import util.CommonUtil;
+import util.CommonValidationUtil;
 import util.ErrorMessageUtil;
 import util.RequestValidation;
 
@@ -43,7 +44,7 @@ public class StoreAckRecord implements RequestHandler<APIGatewayProxyRequestEven
                 return response.withStatusCode(200).withBody(new ResponseMessage(Json_Request_Error.getCode(), list_errorMessage).convertToJsonString());
             }
 
-            if (! CommonUtil.validate_AppRegId(recordTable.getApp_reg_id())) {
+            if (!CommonValidationUtil.validate_AppRegId(recordTable.getApp_reg_id())) {
                 ResponseMessage responseMsg = ErrorMessageUtil.getErrorResponseMessage(AppRegId_Invalid_Error);
                 return response.withStatusCode(200).withBody(responseMsg.convertToJsonString());
             }

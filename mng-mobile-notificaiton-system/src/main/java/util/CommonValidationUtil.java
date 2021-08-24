@@ -23,7 +23,7 @@ public class CommonValidationUtil {
     }
 
     public static FunctionStatus ckValue_Mandatory(String input, Enum[] objects, String fieldName) {
-        if (!stringContainsItemFromList(input, objects))
+        if (isEmpty(input) || !stringContainsItemFromList(input, objects))
             return ErrorMessageUtil.getFunctionStatus(ErrorMessageUtil.ErrorMessage.Invalid_Value_Parameter, fieldName);
         else
             return new FunctionStatus(true, null);
@@ -34,6 +34,19 @@ public class CommonValidationUtil {
             return ErrorMessageUtil.getFunctionStatus(ErrorMessageUtil.ErrorMessage.Invalid_Value_Parameter, fieldName);
         else
             return new FunctionStatus(true, null);
+    }
+
+    public static FunctionStatus ckAppRegId_Mandatory(String input) {
+        if (isEmpty(input))
+            return new FunctionStatus(true, null);
+        else if (isValidLength(input, 20, 20))
+            if (!validate_AppRegId(input))
+                return ErrorMessageUtil.getFunctionStatus(ErrorMessageUtil.ErrorMessage.AppRegId_Invalid_Error, "AppRegId");
+            return new FunctionStatus(true, null);
+    }
+
+    public static boolean validate_AppRegId(String app_reg_id) {
+        return CommonUtil.genIdentifierDigit(app_reg_id.substring(0, 19)).equals(app_reg_id.substring(19, 20));
     }
 
     public static boolean isNull(Object input) {

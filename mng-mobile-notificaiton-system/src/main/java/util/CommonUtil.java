@@ -18,10 +18,6 @@ public class CommonUtil {
         return prefix + topic;
     }
 
-    public static boolean validate_AppRegId(String app_reg_id) {
-        return genIdentifierDigit(app_reg_id.substring(0, 19)).equals(app_reg_id.substring(19, 20));
-    }
-
     public static String getNewAppRegID(String app_id, String strDate) {
         try {
             String newAppRegID = genNewAppRegID(app_id, new SimpleDateFormat("yyyyMMddHHmmss").parse(strDate));
@@ -38,7 +34,7 @@ public class CommonUtil {
         return app_id + strDate + String.format("%06d", randNum);
     }
 
-    private static String genIdentifierDigit(String str) {
+    public static String genIdentifierDigit(String str) {
         int initNum = Integer.parseInt("BEA", 16)*12;
         int sum = 0;
         for (int i = 0; i < str.length(); i++) {

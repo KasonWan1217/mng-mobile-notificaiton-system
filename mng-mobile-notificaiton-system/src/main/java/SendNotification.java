@@ -9,7 +9,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import object.FunctionStatus;
 import object.db.SnsAccount.Subscription;
 import service.DynamoDBService;
@@ -19,7 +18,6 @@ import object.ResponseMessage;
 import org.apache.log4j.BasicConfigurator;
 import util.*;
 
-import static util.CommonValidationUtil.intContainsItemFromList;
 import static util.ErrorMessageUtil.ErrorMessage.*;
 
 /**
@@ -38,6 +36,7 @@ public class SendNotification implements RequestHandler<APIGatewayProxyRequestEv
         ResponseMessage output;
 
         if (input != null) {
+            logger.log("\nStart of SendNotification");
             Gson gson = new Gson();
             ArrayList<FunctionStatus> fs_all = new ArrayList<>();
 

@@ -6,11 +6,12 @@ import object.ResponseMessage;
 public class ErrorMessageUtil {
     public enum ErrorMessage {
         AmazonClient_Error(700, "AmazonClient_Error"),                                  //700
+        Request_Error(703, "Request_Error"),                                            //703
         Json_Request_Error(704, "Json_Request_Error"),                                  //704
         Parameter_Missing_Error(705, "Parameter_Missing_Error"),                        //705
         Invalid_Length_Parameter(706, "Invalid_Length_Parameter"),                      //706
         Invalid_Value_Parameter(707, "Invalid_Value_Parameter"),                        //707
-        PlatformName_Null_Error(710, "PlatformName_Null_Error"),                        //710
+        ChannelList_Null_Error(710, "ChannelList_Null_Error"),                          //710
         AppRegId_Invalid_Error(711, "AppRegId_Invalid_Error"),                          //711
         AppRegId_Null_Error(712,"AppRegId_Null_Error"),                                 //712
         AppRegId_Inactive_Error(713,"AppRegId_Inactive_Error"),                         //713

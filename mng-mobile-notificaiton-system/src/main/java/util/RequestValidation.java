@@ -19,8 +19,7 @@ public class RequestValidation extends CommonValidationUtil {
         list.add(ckLength_Mandatory(request.getApp_name(), 1, 30, "App_name"));
         list.add(ckValue_Mandatory(request.getMobile_type(), DBEnumValue.MobileType.values(), "Mobile_type"));
         list.add(ckLength_Mandatory(request.getApp_id(), 2, 2, "App_id"));
-        list.add(ckLength_nonMandatory(request.getApp_reg_id(), 20, 20, "App_reg_id"));
-
+        list.add(ckAppRegId_Mandatory(request.getApp_reg_id()));
 
         list = list.stream().filter(item -> !item.isStatus()).collect(Collectors.toList());
         if (list.size() < 1)

@@ -1,9 +1,6 @@
 package util;
 
 public class DBEnumValue {
-    public enum AppName {
-        BEA_APP_Group
-    }
     public enum MobileType {
         iOS,
         Android

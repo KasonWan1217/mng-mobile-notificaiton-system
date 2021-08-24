@@ -20,6 +20,7 @@ import com.google.gson.Gson;
 
 import com.google.gson.GsonBuilder;
 import object.FunctionStatus;
+import object.ResponseMessage;
 import object.db.ApplicationChannel;
 import object.db.InboxRecord;
 import object.InboxMessageRecord;
@@ -219,19 +220,18 @@ public class DynamoDBService {
 
     }
 
-    public static FunctionStatus getChannelList(String app_name, String mobile_type) {
+    public static FunctionStatus getApplicationChannelList(String app_name) {
         try {
             Table table = dynamoDB.getTable("ApplicationChannel");
-            Index index = table.getIndex("AppName-MobileType-GSI");
+            Index index = table.getIndex("AppName-ApplicationChannel-GSI");
 
             ItemCollection<QueryOutcome> items = null;
             QuerySpec querySpec = new QuerySpec();
 
-            if ("AppName-MobileType-GSI".equals(index.getIndexName())) {
-                querySpec.withKeyConditionExpression("app_name = :v1 AND mobile_type = :v2")
+            if ("AppName-ApplicationChannel-GSI".equals(index.getIndexName())) {
+                querySpec.withKeyConditionExpression("app_name = :v1")
                         .withValueMap(new ValueMap()
                                 .withString(":v1", app_name)
-                                .withString(":v2", mobile_type)
                         );
                 items = index.query(querySpec);
                 if (items == null) {
@@ -244,7 +244,6 @@ public class DynamoDBService {
             List<ApplicationChannel> list = new ArrayList<>();
             assert items != null;
 
-
             for (Item item : items) {
                 ApplicationChannel tempObj = new Gson().fromJson(item.toJSON(), ApplicationChannel.class);
                 list.add(tempObj);
@@ -253,10 +252,10 @@ public class DynamoDBService {
 
             HashMap<String, Object> rs = new HashMap<>();
             if (list.size() > 0) {
-                rs.put("ApplicationChannelList", list);
+                rs.put("ChannelList", list);
                 return new FunctionStatus(true, rs);
             } else {
-                return ErrorMessageUtil.getFunctionStatus(PlatformName_Null_Error);
+                return ErrorMessageUtil.getFunctionStatus(ChannelList_Null_Error);
             }
         } catch (AmazonServiceException ase) {
             logger.log("Could not complete operation");
