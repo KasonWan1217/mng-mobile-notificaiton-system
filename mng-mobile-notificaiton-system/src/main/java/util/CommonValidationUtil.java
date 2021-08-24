@@ -23,7 +23,7 @@ public class CommonValidationUtil {
     }
 
     public static FunctionStatus ckValue_Mandatory(String input, Enum[] objects, String fieldName) {
-        if (isEmpty(input) || !stringContainsItemFromList(input, objects))
+        if (!stringContainsItemFromList(input, objects))
             return ErrorMessageUtil.getFunctionStatus(ErrorMessageUtil.ErrorMessage.Invalid_Value_Parameter, fieldName);
         else
             return new FunctionStatus(true, null);

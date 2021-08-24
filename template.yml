@@ -43,10 +43,10 @@ Resources:
               Service: lambda.amazonaws.com
             Action: "sts:AssumeRole"
 
-  LambdaGroupPolicies_:
+  LambdaGroupPolicies:
     Type: "AWS::IAM::Policy"
     Properties:
-      PolicyName: "MNGMobileNotificationSystemPolicies:"
+      PolicyName: "MNGMobileNotificationSystemPolicies"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -135,7 +135,7 @@ Resources:
     Properties:
       CodeUri: mng-mobile-notificaiton-system/
       Handler: RegisterSnsService::handleRequest
-      Role: !GetAtt LambdaExecutionRole-.Arn
+      Role: !GetAtt LambdaExecutionRole.Arn
       Events:
         RegisterDeviceTokenAPI:
           Type: Api

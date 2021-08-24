@@ -2,11 +2,11 @@ version = 0.1
 [default]
 [default.deploy]
 [default.deploy.parameters]
-stack_name = "mng-mobile-notificaiton-system-stack-002"
+stack_name = "mng-mobile-notificaiton-system"
 s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1li4q4wgc7fnm"
 s3_perfix = "mng-mobile-notificaiton-system-bucket-002"
 region = "ap-east-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-s3_prefix = "mng-mobile-notificaiton-system-stack-002"
+s3_prefix = "mng-mobile-notificaiton-system"
 parameter_overrides = "Stage=\"DEV\""

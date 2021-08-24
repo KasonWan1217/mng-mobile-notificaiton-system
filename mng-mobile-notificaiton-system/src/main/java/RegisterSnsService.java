@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import object.FunctionStatus;
 import object.db.ApplicationChannel;
 import object.db.SnsAccount;
@@ -37,17 +38,7 @@ public class RegisterSnsService implements RequestHandler<APIGatewayProxyRequest
         if (input != null) {
             Gson gson = new Gson();
             ArrayList<FunctionStatus> fs_all = new ArrayList<>();
-            SnsAccount snsAccount;
-            try {
-                snsAccount = gson.fromJson(input.getBody(), SnsAccount.class);
-            } catch(Exception e) {
-                fs_all.add(ErrorMessageUtil.getFunctionStatus(Json_Request_Error, input.getBody()));
-                List<FunctionStatus> filteredList = fs_all.stream().filter(entry -> !entry.isStatus()).collect(Collectors.toList());
-                logger.log("\nError Json Request : " + gson.toJson(filteredList));
-                List<Object> list_errorMessage = Arrays.asList(gson.fromJson(gson.toJson(filteredList), ResponseMessage.Message[].class));
-                return response.withStatusCode(200).withBody(new ResponseMessage(Json_Request_Error.getCode(), list_errorMessage).convertToJsonString());
-            }
-
+            SnsAccount snsAccount = gson.fromJson(input.getBody(), SnsAccount.class);
             fs_all.addAll(RequestValidation.registerSnsService_validation(snsAccount));
             if (!fs_all.get(fs_all.size() - 1).isStatus())  {
                 List<FunctionStatus> filteredList = fs_all.stream().filter(entry -> !entry.isStatus()).collect(Collectors.toList());
@@ -138,7 +129,7 @@ public class RegisterSnsService implements RequestHandler<APIGatewayProxyRequest
                     //All Platform Registration Fails OR Topic Subscription Fails
                     List<FunctionStatus> filteredList = fs_all.stream().filter(entry -> !entry.isStatus()).collect(Collectors.toList());
                     logger.log("\nError : " + gson.toJson(filteredList));
-                    logger.log("\nError : " + filteredList);
+                    logger.log("\nError : " + filteredList.toString());
                     List<Object> message = Arrays.asList(gson.fromJson(gson.toJson(filteredList), ResponseMessage.Message[].class));
                     return response.withStatusCode(200).withBody(new ResponseMessage(Sns_Registration_Error.getCode(), message).convertToJsonString());
                 }
