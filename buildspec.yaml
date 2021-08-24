@@ -1,0 +1,26 @@
+version: 0.2
+env:
+  variables:
+    TEMPLATE_FILE: "template.yaml"
+    OUTPUT_TEMPLATE_FILE: "packaged.yaml"
+    S3_BUCKET: "mng-mobile-notification-system-bucket-003"
+    STACK : "mng-mobile-notification-system-stack-003"
+phases:
+  install:
+    runtime-versions:
+      java: corretto11
+  pre_build:
+    commands:
+#      - pip install --upgrade awscli
+#      - sam --version
+  build:
+    commands:
+      - sam build
+#      - sam deploy --s3-bucket $S3_BUCKET --stack-name $STACK --capabilities CAPABILITY_IAM --no-confirm-changeset
+  post_build:
+    commands:
+      - sam package --s3-bucket $S3_BUCKET --output-template-file $TEMPLATE_FILE
+artifacts:
+  discard-paths: yes
+  files:
+    - $TEMPLATE_FILE

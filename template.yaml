@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  whk1-bea-mng-opr-dev-codecommit-repo02
+  mng-mobile-notification-system
   SAM Template for mng-mobile-notification-project
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
@@ -46,19 +46,19 @@ Resources:
   LambdaGroupPolicies:
     Type: "AWS::IAM::Policy"
     Properties:
-      PolicyName: "MNGMobileNotificationSystemPolicies"
+      PolicyName: "MNGMobileNotificationSystemPolicy"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Sid: Ec2Policy
+          - Sid: EC2VPCPolicy
             Effect: Allow
             Action:
-              - ec2:CreateVpcEndpoint
-              - ec2:DescribeNetworkInterfaces
               - ec2:CreateNetworkInterface
+              - ec2:DescribeNetworkInterfaces
               - ec2:DeleteNetworkInterface
-              - ec2:DescribeInstances
-              - ec2:AttachNetworkInterface
+              - ec2:DescribeSecurityGroups
+              - ec2:DescribeSubnets
+              - ec2:DescribeVpcs
             Resource: "*"
           - Sid: SNSLogPolicy
             Effect: Allow
@@ -133,7 +133,7 @@ Resources:
   RegisterDeviceTokenFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: mng-mobile-notificaiton-system/
+      CodeUri: mng-mobile-notification-system/
       Handler: RegisterSnsService::handleRequest
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -148,7 +148,7 @@ Resources:
   SendNotificationFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: mng-mobile-notificaiton-system/
+      CodeUri: mng-mobile-notification-system/
       Handler: SendNotification::handleRequest
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -163,7 +163,7 @@ Resources:
   StoreAckRecordFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: mng-mobile-notificaiton-system/
+      CodeUri: mng-mobile-notification-system/
       Handler: StoreAckRecord::handleRequest
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -178,7 +178,7 @@ Resources:
   RetrieveInboxRecordFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: mng-mobile-notificaiton-system/
+      CodeUri: mng-mobile-notification-system/
       Handler: RetrieveInboxRecord::handleRequest
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -193,7 +193,7 @@ Resources:
   SubscribeTopicFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: mng-mobile-notificaiton-system/
+      CodeUri: mng-mobile-notification-system/
       Handler: SubscribeTopic::handleRequest
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -208,7 +208,7 @@ Resources:
   UnsubscribeTopicFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: mng-mobile-notificaiton-system/
+      CodeUri: mng-mobile-notification-system/
       Handler: UnsubscribeTopic::handleRequest
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -319,6 +319,8 @@ Resources:
           AttributeType: "S"
         - AttributeName: "mobile_type"
           AttributeType: "S"
+        - AttributeName: "channel_type"
+          AttributeType: "S"
       KeySchema:
         - AttributeName: "channel_name"
           KeyType: "HASH"
@@ -335,12 +337,10 @@ Resources:
           Projection:
             ProjectionType: "ALL"
       GlobalSecondaryIndexes:
-        - IndexName: "AppName-MobileType-GSI"
+        - IndexName: "AppName-ApplicationChannel-GSI"
           KeySchema:
             - AttributeName: "app_name"
               KeyType: "HASH"
-            - AttributeName: "mobile_type"
-              KeyType: "RANGE"
           Projection:
             ProjectionType: "ALL"
       StreamSpecification:
