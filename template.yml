@@ -166,13 +166,6 @@ Resources:
       CodeUri: mng-mobile-notificaiton-system/
       Handler: StoreAckRecord::handleRequest
       Role: !GetAtt LambdaExecutionRole.Arn
-      VpcConfig:
-        SecurityGroupIds:
-          - sg-02e3e831a553bb665
-        SubnetIds:
-          - subnet-09ccfd909f401f632
-          - subnet-056f0d777bab1c58e
-          - subnet-079cbb4e748d98f7e
       Events:
         StoreAckRecordAPI:
           Type: Api
