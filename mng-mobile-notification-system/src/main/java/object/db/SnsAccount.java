@@ -20,6 +20,17 @@ public class SnsAccount {
     private String active_status;
     private List<Subscription> subscriptions;
 
+    public SnsAccount(SnsAccount snsAccount) {
+        this.app_reg_id = snsAccount.getApp_reg_id();
+        this.device_token = snsAccount.getDevice_token();
+        this.app_name = snsAccount.getApp_name();
+        this.mobile_type = snsAccount.getMobile_type();
+        this.create_datetime = snsAccount.getCreate_datetime();
+        this.active_status = snsAccount.getActive_status();
+        this.subscriptions = snsAccount.getSubscriptions();
+        this.app_id = snsAccount.getApp_id();
+    }
+
     //dynamoDB ignore.
     private String app_id;
 

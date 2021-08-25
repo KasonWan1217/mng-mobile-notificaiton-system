@@ -163,6 +163,9 @@ public class DynamoDBService {
                 logger.log("getSnsAccount: " + item.toJSONPretty());
                 snsAccount = new Gson().fromJson(item.toJSON(), SnsAccount.class);
             }
+            logger.log("SnsAccount: " + new Gson().toJson(snsAccount));
+            if (snsAccount == null)
+                return ErrorMessageUtil.getFunctionStatus(AppRegId_Invalid_Error);
             HashMap<String, Object> rs = new HashMap<>();
             rs.put("snsAccount", snsAccount);
             return new FunctionStatus(true, rs);
@@ -223,12 +226,12 @@ public class DynamoDBService {
     public static FunctionStatus getApplicationChannelList(String app_name) {
         try {
             Table table = dynamoDB.getTable("ApplicationChannel");
-            Index index = table.getIndex("AppName-ApplicationChannel-GSI");
+            Index index = table.getIndex("AppName-GSI");
 
             ItemCollection<QueryOutcome> items = null;
             QuerySpec querySpec = new QuerySpec();
 
-            if ("AppName-ApplicationChannel-GSI".equals(index.getIndexName())) {
+            if ("AppName-GSI".equals(index.getIndexName())) {
                 querySpec.withKeyConditionExpression("app_name = :v1")
                         .withValueMap(new ValueMap()
                                 .withString(":v1", app_name)

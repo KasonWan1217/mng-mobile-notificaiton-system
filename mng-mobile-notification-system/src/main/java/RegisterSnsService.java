@@ -61,9 +61,11 @@ public class RegisterSnsService implements RequestHandler<APIGatewayProxyRequest
 
 
             //Try to retrieve account record by DeviceToken or AppRegId
-            if (snsAccount.getApp_reg_id() != null && snsAccount.getApp_reg_id().isEmpty()) {
+            if (snsAccount.getApp_reg_id() != null && !snsAccount.getApp_reg_id().isEmpty()) {
+                logger.log("\nGet Existing Account by AppRegId");
                 fs_all.add(DynamoDBService.getSnsAccount_AppRegId(snsAccount.getApp_reg_id()));
             } else {
+                logger.log("\nGet Existing Account by DeviceToken");
                 fs_all.add(DynamoDBService.getSnsAccount_DeviceToken(snsAccount.getDevice_token()));
             }
             if (!fs_all.get(fs_all.size() - 1).isStatus()) {
@@ -75,21 +77,13 @@ public class RegisterSnsService implements RequestHandler<APIGatewayProxyRequest
             oldAccount = (SnsAccount) fs_all.get(fs_all.size() - 1).getResponse().get("snsAccount");
             boolean reg_device_token = true;
             boolean update_device_token = false;
-            List<ApplicationChannel> pre_subscribe_platform = null;
-            List<ApplicationChannel> pre_subscribe_topic = null;
+            List<ApplicationChannel> list_pre_subscribe_platform = null;
+            List<ApplicationChannel> list_pre_subscribe_topic = null;
             //Processing of existing cases
             if (oldAccount != null) {
-                if (!oldAccount.getDevice_token().equals(snsAccount.getDevice_token())) {
-                    //update device token + reset account, (check datetime)
-                    //reg_device_token = true;
-                    update_device_token = true;
-
-                    fs_all.add(SNSNotificationService.resetAccount(oldAccount.getSubscriptions()));
-                    oldAccount.setDevice_token(snsAccount.getDevice_token());
-                    snsAccount = oldAccount;
-                    snsAccount.setSubscriptions(null);
-                    //update subscription
-                } else if (!oldAccount.getApp_id().equals(snsAccount.getApp_id())) {
+                logger.log("\nProcess the Existing Account");
+                if (!oldAccount.getApp_reg_id().equals(snsAccount.getApp_reg_id())) {
+                    logger.log("\nReset the existing Account, and need to create the new Account");
                     //register new account + reset account, update status,
                     //reg_device_token = true;
                     //update_device_token = false;
@@ -98,7 +92,21 @@ public class RegisterSnsService implements RequestHandler<APIGatewayProxyRequest
                     logger.log("\nReset Account : " + oldAccount.convertToJsonString());
                     DynamoDBService.updateData(oldAccount);
                     //new account
+                } else if (!oldAccount.getDevice_token().equals(snsAccount.getDevice_token())) {
+                    logger.log("\nNeed to update the Device Token");
+                    //update device token + reset account, (check datetime)
+                    //reg_device_token = true;
+                    update_device_token = true;
+
+                    fs_all.add(SNSNotificationService.resetAccount(oldAccount.getSubscriptions()));
+                    oldAccount.setDevice_token(snsAccount.getDevice_token());
+                    snsAccount = new SnsAccount(oldAccount);
+                    logger.log("\nSubL:" + oldAccount.getSubscriptions().size());
+                    snsAccount.setSubscriptions(null);
+                    logger.log("\nSubL:" + oldAccount.getSubscriptions().size());
+                    //update subscription
                 } else {
+                    logger.log("\nAll Account data Correct");
                     //account exists break all function
                     reg_device_token = false;
                     //update_device_token = false;
@@ -111,17 +119,21 @@ public class RegisterSnsService implements RequestHandler<APIGatewayProxyRequest
 
 
             if (reg_device_token) {
+                logger.log("\nGet Application Channel List");
                 //Set up SnsAccount & pre_subscribe_list
                 fs_all.add(DynamoDBService.getApplicationChannelList(snsAccount.getApp_name()));
                 if (!fs_all.get(fs_all.size() - 1).isStatus()) {
                     logger.log("\nError : " + gson.toJson(fs_all));
                     return response.withStatusCode(200).withBody(new ResponseMessage(DynamoDB_Query_Error.getCode(), fs_all.get(fs_all.size() - 1).convertToMessage()).convertToJsonString());
                 }
+                //setup Application Channel List
                 List<ApplicationChannel> temp_ApplicationChannel = (List<ApplicationChannel>) fs_all.get(fs_all.size() - 1).getResponse().get("ChannelList");
+                String mobile_type = snsAccount.getMobile_type();
+                list_pre_subscribe_platform = temp_ApplicationChannel.stream().filter(entry -> (entry.getChannel_type().equals(ArnType.Platform.toString()) && entry.getMobile_type().equals(mobile_type))).collect(Collectors.toList());
 
                 if (!update_device_token) {
                     //setup new account
-                    logger.log("\nCreate Account");
+                    logger.log("\nSetup New Account & Application Channel List");
                     snsAccount.setActive_status(Status.Fail.toString());
                     snsAccount.setCreate_datetime(CommonUtil.getCurrentTime());
                     snsAccount.setApp_reg_id(CommonUtil.getNewAppRegID(snsAccount.getApp_id(), snsAccount.getCreate_datetime()));
@@ -134,69 +146,73 @@ public class RegisterSnsService implements RequestHandler<APIGatewayProxyRequest
                         return response.withStatusCode(200).withBody(new ResponseMessage(DynamoDB_Insert_Error.getCode(), fs_all.get(fs_all.size() - 1).convertToMessage()).convertToJsonString());
                     }
 
-                    //setup Application Channel List
-                    String mobile_type = snsAccount.getMobile_type();
-                    pre_subscribe_platform = temp_ApplicationChannel.stream().filter(entry -> (entry.getChannel_type().equals(ArnType.Platform.toString()) && entry.getMobile_type().equals(mobile_type))).collect(Collectors.toList());
-                    pre_subscribe_topic = temp_ApplicationChannel.stream().filter(entry ->  entry.getChannel_type().equals(ArnType.Topic.toString())).collect(Collectors.toList());
+                    //setup Application Topic List
+                    list_pre_subscribe_topic = temp_ApplicationChannel.stream().filter(entry ->  entry.getChannel_type().equals(ArnType.Topic.toString())).collect(Collectors.toList());
                 }else {
+                    logger.log("\nSetup New Account & Application Channel List - Update Device Token");
+                    //setup Application Topic List
                     List<Subscription> temp_topic = oldAccount.getSubscriptions().stream().filter(entry ->  entry.getChannel_type().equals(ArnType.Topic.toString())).collect(Collectors.toList());
-                    pre_subscribe_topic = Arrays.asList(gson.fromJson(gson.toJson(temp_topic), ApplicationChannel[].class));
+                    list_pre_subscribe_topic = Arrays.asList(gson.fromJson(gson.toJson(temp_topic), ApplicationChannel[].class));
                 }
                 //End of Set up SnsAccount & pre_subscribe_list
 
                 //Start the Registration & Subscription
                 //token_registration - check the register Success/Fail
-                boolean token_registration = false;
+                //boolean token_registration = false;
                 //Platform registration
-                for (ApplicationChannel channel : pre_subscribe_platform) {
+                boolean topic_subscription_status = false, channel_subscription_status = false;
+                for (ApplicationChannel channel : list_pre_subscribe_platform) {
+                    channel_subscription_status = false;
+                    logger.log("\nStart to Subscribe channel");
                     //token_registration - check the topic subscription Success/Fail
-                    boolean topic_subscription = false;
-                    Subscription table_Subscriptions = new Subscription(channel.getChannel_name(), "", ArnType.Platform.toString(), snsAccount.getCreate_datetime());
+                    Subscription channel_subscription = new Subscription(channel.getChannel_name(), "", ArnType.Platform.toString(), snsAccount.getCreate_datetime());
 
                     //Device token registration
-                    fs_all.add(SNSNotificationService.register(snsAccount.getDevice_token(), CommonUtil.getSnsPlatformArn(table_Subscriptions.getChannel_name())));
+                    fs_all.add(SNSNotificationService.register(snsAccount.getDevice_token(), CommonUtil.getSnsPlatformArn(channel_subscription.getChannel_name())));
                     if (fs_all.get(fs_all.size() - 1).isStatus()) {
+                        channel_subscription_status = true;
                         String endpoint_platform = (String) fs_all.get(fs_all.size() - 1).getResponse().get("endpointArn");
-                        table_Subscriptions.setArn(endpoint_platform);
-                        snsAccount.addSubscriptions(table_Subscriptions);
+                        channel_subscription.setArn(endpoint_platform);
+                        snsAccount.addSubscriptions(channel_subscription);
 
                         //Topic subscription
-                        for (ApplicationChannel topic : pre_subscribe_topic) {
-                            String pre_subscribe_topic_name = CommonUtil.getSnsTopicArn(topic.getChannel_name()) + "_" + CommonUtil.getLastWord(snsAccount.getCreate_datetime(), 2);
-                            fs_all.add(SNSNotificationService.subscribe(table_Subscriptions.getArn(), pre_subscribe_topic_name));
-                            if (!fs_all.get(fs_all.size() - 1).isStatus()) {
-                                //unRegister Platform
-                                fs_all.add(SNSNotificationService.unregister(table_Subscriptions.getArn()));
-                                topic_subscription = false;
-                                break;
-                            } else {
+                        for (ApplicationChannel temp_topic : list_pre_subscribe_topic) {
+                            topic_subscription_status = false;
+                            logger.log("\nStart to Subscribe topic");
+                            String pre_subscribe_topic_name = (!update_device_token) ? temp_topic.getChannel_name() + "_" + CommonUtil.getEndIndex(snsAccount.getCreate_datetime(), 12)
+                                    : temp_topic.getChannel_name();
+                            logger.log("\ntopic: "+ pre_subscribe_topic_name);
+                            Subscription topic_subscription = new Subscription(pre_subscribe_topic_name, "", ArnType.Topic.toString(), channel.getChannel_name(), snsAccount.getCreate_datetime());
+                            fs_all.add(SNSNotificationService.subscribe(channel_subscription.getArn(), CommonUtil.getSnsTopicArn(pre_subscribe_topic_name)));
+                            if (fs_all.get(fs_all.size() - 1).isStatus()) {
                                 String subscriptionArn = (String) fs_all.get(fs_all.size() - 1).getResponse().get("subscriptionArn");
-                                Subscription table_sub_topic = new Subscription(topic.getChannel_name() + "_" + CommonUtil.getLastWord(snsAccount.getCreate_datetime(),2), subscriptionArn, ArnType.Topic.toString(), channel.getChannel_name(), snsAccount.getCreate_datetime());
-                                snsAccount.addSubscriptions(table_sub_topic);
-                                topic_subscription = true;
+                                topic_subscription.setArn(subscriptionArn);
+                                snsAccount.addSubscriptions(topic_subscription);
+                                topic_subscription_status = true;
+                            } else {
+                                logger.log("\nFailed to Subscribe topic");
+                                break;
                             }
                         }
-                        if (!topic_subscription) {
-                            fs_all.add(SNSNotificationService.unregister(table_Subscriptions.getArn()));
-                            for (Subscription subscription : snsAccount.getSubscriptions()) {
-                                fs_all.add(SNSNotificationService.unsubscribe(subscription.getArn()));
-                            }
-                            //snsAccount.getSubscriptions().removeIf(item -> table_Subscriptions.getChannel_name().equals(item.getRef_platform_name()) || table_Subscriptions.getChannel_name().equals(item.getChannel_name()));
-                            List<FunctionStatus> filteredList = fs_all.stream().filter(entry -> !entry.isStatus()).collect(Collectors.toList());
-                            logger.log("\nError subscribe : " + gson.toJson(filteredList));
-                            List<Object> list_errorMessage = Arrays.asList(gson.fromJson(gson.toJson(filteredList), ResponseMessage.Message[].class));
-                            return response.withStatusCode(200).withBody(new ResponseMessage(Sns_Subscription_Error.getCode(), list_errorMessage).convertToJsonString());
-                        } else {
-                            token_registration = true;
+                        if (!topic_subscription_status) {
+                            logger.log("\nFailed to Subscribe topic");
+                            break;
                         }
+                    } else {
+                        channel_subscription_status = false;
+                        break;
+                    }
+
+                    if (channel_subscription_status || topic_subscription_status) {
+                        break;
                     }
                 }
                 //End the Registration & Subscription
 
                 //Subscription Success/Fail Action
-                if (token_registration) {
+                if (channel_subscription_status && topic_subscription_status) {
                     //Update Status & Subscriptions.
-                    logger.log("registerSuccess");
+                    logger.log("Subscribe channel Success");
                     snsAccount.setActive_status(Status.Success.toString());
                     fs_all.add(DynamoDBService.updateData(snsAccount));
                     if (!fs_all.get(fs_all.size() - 1).isStatus()) {
@@ -209,12 +225,13 @@ public class RegisterSnsService implements RequestHandler<APIGatewayProxyRequest
                     rs_msg.setDatetime(snsAccount.getCreate_datetime());
                     output = new ResponseMessage(200, rs_msg);
                 } else {
-                    //All Platform Registration Fails
+                    //Failed to Subscribe channel
+                    logger.log("\nFailed to Subscribe channel");
+                    fs_all.add(SNSNotificationService.resetAccount(snsAccount.getSubscriptions()));
                     List<FunctionStatus> filteredList = fs_all.stream().filter(entry -> !entry.isStatus()).collect(Collectors.toList());
-                    logger.log("\nError : " + gson.toJson(filteredList));
-                    logger.log("\nError : " + filteredList);
-                    List<Object> message = Arrays.asList(gson.fromJson(gson.toJson(filteredList), ResponseMessage.Message[].class));
-                    return response.withStatusCode(200).withBody(new ResponseMessage(Sns_Registration_Error.getCode(), message).convertToJsonString());
+                    logger.log("\nError subscribe : " + gson.toJson(filteredList));
+                    List<Object> list_errorMessage = Arrays.asList(gson.fromJson(gson.toJson(filteredList), ResponseMessage.Message[].class));
+                    return response.withStatusCode(200).withBody(new ResponseMessage(Sns_Subscription_Error.getCode(), list_errorMessage).convertToJsonString());
                 }
             }
             

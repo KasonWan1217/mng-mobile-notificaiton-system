@@ -112,7 +112,9 @@ public class SNSNotificationService {
             }
         }
         logger.log("\nresetAccount Success!\n");
-        return new FunctionStatus(true, null);
+        HashMap<String, Object> response =  new HashMap<>();
+        response.put("Reset Status", "Success");
+        return new FunctionStatus(true, response);
     }
 
     public FunctionStatus publishNotification(InboxRecord recordTable, String arn) {

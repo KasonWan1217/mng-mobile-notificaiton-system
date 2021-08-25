@@ -48,7 +48,7 @@ public class CommonUtil {
     public static int genNotificationID(String msg_id, String cTime) {
         try {
             Date datetime = new SimpleDateFormat("yyyyMMddHHmmss").parse(cTime);
-            String rs = new SimpleDateFormat("DDD").format(datetime) + getLastWord(msg_id, 13);
+            String rs = new SimpleDateFormat("DDD").format(datetime) + getEndIndex(msg_id, 13);
             return Integer.parseInt(rs);
         } catch (ParseException e) {
             e.printStackTrace();
@@ -56,8 +56,8 @@ public class CommonUtil {
         return 0;
     }
 
-    public static String getLastWord(String str, int length){
-        return str.substring(length, str.length());
+    public static String getEndIndex(String str, int start_position){
+        return str.substring(start_position, str.length());
     }
 
     public static String getCurrentTime() {

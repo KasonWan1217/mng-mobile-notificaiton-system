@@ -15,6 +15,7 @@ public class ErrorMessageUtil {
         AppRegId_Invalid_Error(711, "AppRegId_Invalid_Error"),                          //711
         AppRegId_Null_Error(712,"AppRegId_Null_Error"),                                 //712
         AppRegId_Inactive_Error(713,"AppRegId_Inactive_Error"),                         //713
+        SnsAccount_Clone_Error(714, "SnsAccount_Clone_Error"),                          //714
         DynamoDB_Insert_Error(730,"DynamoDB_Insert_Error"),                             //730
         DynamoDB_Update_Error(731,"DynamoDB_Update_Error"),                             //731
         DynamoDB_Delete_Error(732,"DynamoDB_Delete_Error"),                             //732
@@ -24,7 +25,7 @@ public class ErrorMessageUtil {
         Sns_Subscription_Error(772,"Sns_Subscription_Error"),                           //772
         Sns_Unsubscribe_Error(773,"Sns_Unsubscribe_Error"),                             //773
         Sns_Publish_Notification_Error(774,"Sns_Publish_Notification_Error"),           //774
-        Topic_subscription_Already_Error(780,"Topic_subscription_Already_Error"),   //780
+        Topic_subscription_Already_Error(780,"Topic_subscription_Already_Error"),       //780
         Topic_subscription_List_Null_Error(781,"Topic_subscription_List_Null_Error"),   //781
         Request_Format_Error(500,"Request_Format_Error");                               //500
 

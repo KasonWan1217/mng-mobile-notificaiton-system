@@ -38,10 +38,9 @@ public class SendNotification implements RequestHandler<APIGatewayProxyRequestEv
         if (input != null) {
             logger.log("\nStart of SendNotification");
             Gson gson = new Gson();
-            ArrayList<FunctionStatus> fs_all = new ArrayList<>();
 
             InboxRecord recordTable = gson.fromJson(input.getBody(), InboxRecord.class);
-            fs_all.addAll(RequestValidation.sendNotification_validation(recordTable));
+            ArrayList<FunctionStatus> fs_all = new ArrayList<>(RequestValidation.sendNotification_validation(recordTable));
             if (!fs_all.get(fs_all.size() - 1).isStatus())  {
                 List<FunctionStatus> filteredList = fs_all.stream().filter(entry -> !entry.isStatus()).collect(Collectors.toList());
                 logger.log("\nError subscribe : " + gson.toJson(filteredList));
