@@ -317,10 +317,6 @@ Resources:
           AttributeType: "S"
         - AttributeName: "app_name"
           AttributeType: "S"
-        - AttributeName: "mobile_type"
-          AttributeType: "S"
-        - AttributeName: "channel_type"
-          AttributeType: "S"
       KeySchema:
         - AttributeName: "channel_name"
           KeyType: "HASH"
@@ -337,7 +333,7 @@ Resources:
           Projection:
             ProjectionType: "ALL"
       GlobalSecondaryIndexes:
-        - IndexName: "AppName-ApplicationChannel-GSI"
+        - IndexName: "AppName-GSI"
           KeySchema:
             - AttributeName: "app_name"
               KeyType: "HASH"
