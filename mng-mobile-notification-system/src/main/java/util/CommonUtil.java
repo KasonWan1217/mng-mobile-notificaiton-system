@@ -56,8 +56,12 @@ public class CommonUtil {
         return 0;
     }
 
-    public static String getEndIndex(String str, int start_position){
-        return str.substring(start_position, str.length());
+    public static String getStartIndex(String str, int pos){
+        return str.substring(0, str.length()-pos);
+    }
+
+    public static String getEndIndex(String str, int pos){
+        return str.substring(pos, str.length());
     }
 
     public static String getCurrentTime() {

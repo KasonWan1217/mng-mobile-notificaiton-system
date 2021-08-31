@@ -77,8 +77,6 @@ public class RegisterSnsService implements RequestHandler<APIGatewayProxyRequest
             oldAccount = (SnsAccount) fs_all.get(fs_all.size() - 1).getResponse().get("snsAccount");
             boolean reg_device_token = true;
             boolean update_device_token = false;
-            List<ApplicationChannel> list_pre_subscribe_platform = null;
-            List<ApplicationChannel> list_pre_subscribe_topic = null;
             //Processing of existing cases
             if (oldAccount != null) {
                 logger.log("\nProcess the Existing Account");
@@ -129,7 +127,8 @@ public class RegisterSnsService implements RequestHandler<APIGatewayProxyRequest
                 //setup Application Channel List
                 List<ApplicationChannel> temp_ApplicationChannel = (List<ApplicationChannel>) fs_all.get(fs_all.size() - 1).getResponse().get("ChannelList");
                 String mobile_type = snsAccount.getMobile_type();
-                list_pre_subscribe_platform = temp_ApplicationChannel.stream().filter(entry -> (entry.getChannel_type().equals(ArnType.Platform.toString()) && entry.getMobile_type().equals(mobile_type))).collect(Collectors.toList());
+                List<ApplicationChannel> list_pre_subscribe_platform = temp_ApplicationChannel.stream().filter(entry -> (entry.getChannel_type().equals(ArnType.Platform.toString()) && entry.getMobile_type().equals(mobile_type))).collect(Collectors.toList());
+                List<ApplicationChannel> list_pre_subscribe_topic = temp_ApplicationChannel.stream().filter(entry ->  entry.getChannel_type().equals(ArnType.Topic.toString())).collect(Collectors.toList());
 
                 if (!update_device_token) {
                     //setup new account
@@ -145,15 +144,23 @@ public class RegisterSnsService implements RequestHandler<APIGatewayProxyRequest
                         logger.log("\nError : " + gson.toJson(fs_all));
                         return response.withStatusCode(200).withBody(new ResponseMessage(DynamoDB_Insert_Error.getCode(), fs_all.get(fs_all.size() - 1).convertToMessage()).convertToJsonString());
                     }
-
+                } else {
+                    logger.log("\nUpdate Application Topic List - Update Device Token");
                     //setup Application Topic List
-                    list_pre_subscribe_topic = temp_ApplicationChannel.stream().filter(entry ->  entry.getChannel_type().equals(ArnType.Topic.toString())).collect(Collectors.toList());
-                }else {
-                    logger.log("\nSetup New Account & Application Channel List - Update Device Token");
-                    //setup Application Topic List
-                    List<Subscription> temp_topic = oldAccount.getSubscriptions().stream().filter(entry ->  entry.getChannel_type().equals(ArnType.Topic.toString())).collect(Collectors.toList());
-                    list_pre_subscribe_topic = Arrays.asList(gson.fromJson(gson.toJson(temp_topic), ApplicationChannel[].class));
+                    List<Subscription> temp_topic = oldAccount.getSubscriptions().stream().filter(entry -> entry.getChannel_type().equals(ArnType.Topic.toString())).collect(Collectors.toList());
+                    logger.log("\nUpdate Device Token\n"+gson.toJson(temp_topic));
+                    temp_topic.stream().forEach(c -> c.setChannel_name(CommonUtil.getStartIndex(c.getChannel_name(),3)));
+                    logger.log("\nUpdate Device Token\n"+gson.toJson(temp_topic));
+                    temp_topic = temp_topic.stream().filter(t -> list_pre_subscribe_topic.stream().noneMatch(l -> l.getChannel_name().equals(t.getChannel_name()))).collect(Collectors.toList());
+                    logger.log("\nUpdate Device Token\n"+gson.toJson(temp_topic));
+                    list_pre_subscribe_topic.addAll(Arrays.asList(gson.fromJson(gson.toJson(temp_topic), ApplicationChannel[].class)));
+                    //listA.addAll(listB.stream().filter(t -> listA.stream().noneMatch(u -> areEqual.test(t, u))).collect(Collectors.toList())
+//                    for (ApplicationChannel temp_all_c : list_pre_subscribe_topic) {
+//                        temp_topic.stream().filter(c -> c.getChannel_name().equals(temp_all_c.getChannel_name())).collect(Collectors.toList());
+//                    }
+//                    list_pre_subscribe_topic.addAll(Arrays.asList(gson.fromJson(gson.toJson(temp_topic), ApplicationChannel[].class)));
                 }
+                //List<FunctionStatus> filteredList = fs_all.stream().filter(entry -> sting1.contains("sss")).collect(Collectors.toList());
                 //End of Set up SnsAccount & pre_subscribe_list
 
                 //Start the Registration & Subscription
@@ -179,8 +186,7 @@ public class RegisterSnsService implements RequestHandler<APIGatewayProxyRequest
                         for (ApplicationChannel temp_topic : list_pre_subscribe_topic) {
                             topic_subscription_status = false;
                             logger.log("\nStart to Subscribe topic");
-                            String pre_subscribe_topic_name = (!update_device_token) ? temp_topic.getChannel_name() + "_" + CommonUtil.getEndIndex(snsAccount.getCreate_datetime(), 12)
-                                    : temp_topic.getChannel_name();
+                            String pre_subscribe_topic_name = temp_topic.getChannel_name() + "_" + CommonUtil.getEndIndex(snsAccount.getCreate_datetime(), 12);
                             logger.log("\ntopic: "+ pre_subscribe_topic_name);
                             Subscription topic_subscription = new Subscription(pre_subscribe_topic_name, "", ArnType.Topic.toString(), channel.getChannel_name(), snsAccount.getCreate_datetime());
                             fs_all.add(SNSNotificationService.subscribe(channel_subscription.getArn(), CommonUtil.getSnsTopicArn(pre_subscribe_topic_name)));
@@ -200,10 +206,6 @@ public class RegisterSnsService implements RequestHandler<APIGatewayProxyRequest
                         }
                     } else {
                         channel_subscription_status = false;
-                        break;
-                    }
-
-                    if (channel_subscription_status || topic_subscription_status) {
                         break;
                     }
                 }
